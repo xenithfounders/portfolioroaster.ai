@@ -1,0 +1,84 @@
+{
+  "theme": "dark",
+  "archetype": "Swiss & High-Contrast / Brutalist Terminal",
+  "design_philosophy": "Neo-brutalist, terminal-inspired, meme-card aesthetic. Reject clean tech gradients. Embrace raw edges, high contrast, solid blocks of color, and hard shadows. The design should feel slightly aggressive, highly functional, and exactly like a meme card that developers would screenshot and share on Twitter.",
+  "colors": {
+    "background": "#0f0f0f",
+    "surface": "#18181b",
+    "primary": "#ff4500",
+    "primary_hover": "#e03e00",
+    "text_main": "#f3f4f6",
+    "text_muted": "#a1a1aa",
+    "border_default": "#3f3f46",
+    "border_focus": "#ff4500",
+    "success": "#10b981",
+    "danger": "#ef4444"
+  },
+  "typography": {
+    "font_family": "Space Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    "h1": "text-5xl sm:text-6xl+ font-black tracking-tighter uppercase",
+    "h2": "text-3xl sm:text-4xl font-bold tracking-tight uppercase",
+    "h3": "text-xl sm:text-2xl font-bold uppercase",
+    "body": "text-base sm:text-lg font-normal tracking-tight",
+    "small": "text-xs sm:text-sm font-bold uppercase tracking-widest",
+    "notes": "ALL headings must be uppercase. Use Space Mono (or similar monospace) for EVERYTHING to maintain the terminal/meme vibe."
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "Use generous spacing for sections (py-24), but tight, dense spacing for terminal data (p-4, gap-2).",
+    "border_radius": "rounded-none (0px). NO rounded corners anywhere. Sharp edges only.",
+    "borders": "Heavy borders. Use border-2 or border-4. Default border color #3f3f46, but hover/active states snap to #ff4500.",
+    "shadows": "Hard flat shadows (Neo-brutalist style). NO soft blurs. Example: shadow-[6px_6px_0px_0px_#ff4500] for primary elements, shadow-[4px_4px_0px_0px_#3f3f46] for secondary.",
+    "grid": "Bento-style but raw. Grid items should have visible borders. background grids: bg-[linear-gradient(to_right,#3f3f4633_1px,transparent_1px),linear-gradient(to_bottom,#3f3f4633_1px,transparent_1px)] bg-[size:24px_24px]"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#0f0f0f] text-[#ff4500] border-2 border-[#ff4500] shadow-[4px_4px_0px_0px_#ff4500] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_#ff4500] transition-all uppercase font-bold px-6 py-3",
+      "secondary": "bg-[#18181b] text-white border-2 border-[#3f3f46] shadow-[4px_4px_0px_0px_#3f3f46] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_#ff4500] hover:border-[#ff4500] transition-all uppercase px-6 py-3"
+    },
+    "inputs": {
+      "default": "bg-[#0f0f0f] text-white border-2 border-[#3f3f46] p-4 font-mono focus:border-[#ff4500] focus:ring-0 focus:outline-none placeholder:text-[#a1a1aa] w-full"
+    },
+    "cards": {
+      "meme_roast_card": "bg-[#0f0f0f] border-4 border-[#ff4500] p-6 sm:p-10 relative overflow-hidden. Must look like a trading card. Use a massive absolute positioned background watermark (e.g., 'ROASTED' at 10% opacity)."
+    },
+    "badges": {
+      "default": "px-2 py-1 bg-[#ff4500]/20 text-[#ff4500] border border-[#ff4500] uppercase text-xs font-bold"
+    }
+  },
+  "media_and_icons": {
+    "icon_library": "lucide-react",
+    "icon_style": "Sharp, unstyled, stroke-width 2. Use Flame, Skull, CheckCircle, XCircle, Terminal.",
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/14066344/pexels-photo-14066344.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "hero_background_or_decorative",
+        "description": "Mysterious hacker with neon mask. Use as an optional dark accent image or section background with heavy opacity overlay (bg-black/80)."
+      },
+      {
+        "url": "https://images.pexels.com/photos/5380615/pexels-photo-5380615.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "testimonial_avatar",
+        "description": "Dark room coding aesthetic. Can be used for the 'AI Persona' or 'Lead Roaster' avatar."
+      }
+    ],
+    "css_backgrounds": "Prefer pure CSS patterns over images. Use the 24px grid pattern mentioned in layout_and_spacing to simulate a cutting mat or terminal background."
+  },
+  "page_specific_instructions": {
+    "landing_hero": "Massive H1 'GET YOUR PORTFOLIO BRUTALLY ROASTED BY AI'. Subtext: 'FAANG engineers won't tell you the truth. Our AI will.' Primary CTA 'ROAST ME NOW'.",
+    "input_section": "Terminal window motif. A box with a fake terminal header (red/yellow/green dots, though use grayscale/red for brutalism) and an input field starting with '> paste url/resume'.",
+    "loading_state": "Do not use a simple spinner. Use a terminal typing effect: 'Analyzing garbage code...', 'Finding stolen CSS...', 'Calculating roast severity...'",
+    "roast_results_meme_card": "CRITICAL: This must be a self-contained div that looks amazing when screenshotted. Massive Score out of 10. A grid with two columns: left column '5 Brutal Callouts' (red borders, skull icons), right column '5 Exact Fixes' (green/orange borders, check icons). Bottom: 'One-liner Verdict' and a 'Share to Twitter' brutalist button.",
+    "pricing_payment": "Triggered on second attempt. '₹29 per roast. Server bills aren't a meme.' Razorpay checkout integration trigger."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure #f3f4f6 against #0f0f0f meets APCA/WCAG standards. The #ff4500 is very bright and serves as an excellent warning/accent color.",
+    "data_testid_convention": "All interactive elements MUST have data-testid in kebab-case (e.g., 'roast-submit-button', 'url-input', 'razorpay-pay-button', 'twitter-share-button')."
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the #0f0f0f background and #ff4500 accent.",
+    "Do NOT use Shadcn's default rounded corners. Apply rounded-none to all Shadcn components (Cards, Inputs, Buttons) via tailwind.config or class overrides.",
+    "Implement the hard flat shadows (e.g., shadow-[4px_4px_0px_0px_#ff4500]) for the brutalist feel.",
+    "Ensure the 'Roast Results' section is visually distinct, boxed in a heavy red border, and structured like a sharable graphic.",
+    "Set the global font to a monospace font like 'Space Mono' or 'JetBrains Mono' (import via Google Fonts in index.html or layout if necessary).",
+    "Use the CSS grid pattern for the background of the hero section to emphasize the developer/terminal look."
+  ]
+}
