@@ -34,6 +34,17 @@ User asked: "instead of stripe, use razorpay". Build the PortfolioRoast.ai app (
 - [x] Shareable `/roast/:id` meme card with Twitter share
 - [x] 12/12 backend pytest cases passing, frontend e2e verified
 
+### Iteration 2 (2026-04-23)
+- [x] Multi-platform share grid: X/Twitter, LinkedIn, WhatsApp, Facebook, Telegram, Reddit
+- [x] Copy-link button (with clipboard fallback + "Link copied!" confirmation)
+- [x] Native Web Share API button (auto-shown on mobile-supported browsers)
+- [x] Four legal pages with routes + brutalist styling:
+  - `/terms` — Terms & Conditions
+  - `/privacy` — Privacy Policy
+  - `/refund` — Cancellation & Refund Policy
+  - `/contact` — Contact Us (contact@pixelbond.in, xenithfounders@gmail.com, +91 93500 15443)
+- [x] Footer updated: links to all 4 legal pages; brand line changed to "Built with scars by XenithHQ"
+
 ## Prioritized Backlog
 - **P1** — Re-roast tier (₹99 "Deep Audit" pack: resume + LinkedIn + GitHub)
 - **P1** — OG image generator (`/api/og/:id`) for better Twitter/LinkedIn previews

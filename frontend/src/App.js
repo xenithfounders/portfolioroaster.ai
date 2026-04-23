@@ -8,13 +8,20 @@ import {
   CheckCircle2,
   Terminal,
   Zap,
-  Share2,
   AlertTriangle,
   ArrowRight,
   Loader2,
   Lock,
   Sparkles,
+  Twitter,
+  Linkedin,
+  Facebook,
+  MessageCircle,
+  Send,
+  Link as LinkIcon,
+  Check,
 } from "lucide-react";
+import { TermsPage, PrivacyPage, RefundPage, ContactPage } from "./LegalPages";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const RAZORPAY_KEY_ID = process.env.REACT_APP_RAZORPAY_KEY_ID;
@@ -625,19 +632,23 @@ const FAQ = () => {
 
 // ============ FOOTER ============
 const Footer = () => (
-  <footer className="px-6 md:px-12 py-10 text-sm text-[#a1a1aa]">
-    <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-      <div className="flex items-center gap-2">
+  <footer className="px-6 md:px-12 py-10 text-sm text-[#a1a1aa] border-t-2 border-[#3f3f46]">
+    <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="flex items-center gap-2" data-testid="footer-brand">
         <div className="w-6 h-6 bg-[#ff4500] flex items-center justify-center">
           <Flame size={12} className="text-black" />
         </div>
         <span className="uppercase font-bold">PortfolioRoast.ai</span>
-        <span className="text-[#52525b]">· Built with scars in Jaipur</span>
+        <span className="text-[#52525b]">· Built with scars by XenithHQ</span>
       </div>
-      <div className="flex items-center gap-4 text-xs uppercase tracking-widest">
-        <span>Payments by Razorpay</span>
+      <div className="flex items-center flex-wrap gap-x-5 gap-y-2 text-xs uppercase tracking-widest">
+        <Link to="/terms" className="hover:text-white" data-testid="footer-terms">Terms &amp; Conditions</Link>
         <span className="text-[#52525b]">·</span>
-        <span>AI by Gemini</span>
+        <Link to="/privacy" className="hover:text-white" data-testid="footer-privacy">Privacy Policy</Link>
+        <span className="text-[#52525b]">·</span>
+        <Link to="/refund" className="hover:text-white" data-testid="footer-refund">Cancellation &amp; Refund</Link>
+        <span className="text-[#52525b]">·</span>
+        <Link to="/contact" className="hover:text-white" data-testid="footer-contact">Contact Us</Link>
       </div>
     </div>
   </footer>
@@ -656,6 +667,82 @@ const Landing = () => {
       <Pricing />
       <FAQ />
       <Footer />
+    </div>
+  );
+};
+
+// ============ SHARE GRID ============
+const ShareGrid = ({ shareLinks, shareUrl, shareText }) => {
+  const [copied, setCopied] = useState(false);
+  const [nativeAvailable, setNativeAvailable] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.share) setNativeAvailable(true);
+  }, []);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = shareUrl;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch {}
+      document.body.removeChild(ta);
+    }
+  };
+
+  const nativeShare = async () => {
+    try {
+      await navigator.share({ title: "PortfolioRoast.ai", text: shareText, url: shareUrl });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-testid="share-grid">
+      {shareLinks.map(({ key, label, icon: Icon, href }) => (
+        <a
+          key={key}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="border-2 border-[#3f3f46] bg-[#0f0f0f] p-3 flex items-center gap-2 text-sm uppercase tracking-widest hover:border-[#ff4500] hover:text-[#ff4500] hover:-translate-y-[2px] hover:shadow-[4px_4px_0px_0px_#ff4500] transition-all"
+          data-testid={`share-${key}`}
+        >
+          <Icon size={16} />
+          <span className="truncate">{label}</span>
+        </a>
+      ))}
+      <button
+        type="button"
+        onClick={copyLink}
+        className={`border-2 p-3 flex items-center gap-2 text-sm uppercase tracking-widest hover:-translate-y-[2px] transition-all ${
+          copied
+            ? "border-[#10b981] text-[#10b981] shadow-[4px_4px_0px_0px_#10b981]"
+            : "border-[#3f3f46] bg-[#0f0f0f] hover:border-[#ff4500] hover:text-[#ff4500] hover:shadow-[4px_4px_0px_0px_#ff4500]"
+        }`}
+        data-testid="share-copy"
+      >
+        {copied ? <Check size={16} /> : <LinkIcon size={16} />}
+        <span className="truncate">{copied ? "Link copied!" : "Copy link"}</span>
+      </button>
+      {nativeAvailable && (
+        <button
+          type="button"
+          onClick={nativeShare}
+          className="border-2 border-[#ff4500] bg-[#ff4500]/10 text-[#ff4500] p-3 flex items-center gap-2 text-sm uppercase tracking-widest hover:-translate-y-[2px] hover:shadow-[4px_4px_0px_0px_#ff4500] transition-all"
+          data-testid="share-native"
+        >
+          <Send size={16} />
+          <span className="truncate">More...</span>
+        </button>
+      )}
     </div>
   );
 };
@@ -704,10 +791,47 @@ const RoastPage = () => {
     );
   }
 
-  const tweet = encodeURIComponent(
-    `I got my portfolio roasted by AI and scored ${roast.score}/10 🔥\n\n"${roast.one_liner}"\n\nGet yours → portfolioroast.ai`
-  );
-  const tweetUrl = `https://twitter.com/intent/tweet?text=${tweet}`;
+  const shareText = `I got my portfolio roasted by AI and scored ${roast.score}/10 🔥\n\n"${roast.one_liner}"\n\nGet yours →`;
+  const shareUrl = typeof window !== "undefined" ? window.location.href : `https://portfolioroast.ai/roast/${roast.id}`;
+  const enc = encodeURIComponent;
+  const shareLinks = [
+    {
+      key: "x",
+      label: "X / Twitter",
+      icon: Twitter,
+      href: `https://twitter.com/intent/tweet?text=${enc(shareText)}&url=${enc(shareUrl)}`,
+    },
+    {
+      key: "linkedin",
+      label: "LinkedIn",
+      icon: Linkedin,
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(shareUrl)}`,
+    },
+    {
+      key: "whatsapp",
+      label: "WhatsApp",
+      icon: MessageCircle,
+      href: `https://wa.me/?text=${enc(shareText + " " + shareUrl)}`,
+    },
+    {
+      key: "facebook",
+      label: "Facebook",
+      icon: Facebook,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${enc(shareUrl)}&quote=${enc(shareText)}`,
+    },
+    {
+      key: "telegram",
+      label: "Telegram",
+      icon: Send,
+      href: `https://t.me/share/url?url=${enc(shareUrl)}&text=${enc(shareText)}`,
+    },
+    {
+      key: "reddit",
+      label: "Reddit",
+      icon: MessageCircle,
+      href: `https://www.reddit.com/submit?url=${enc(shareUrl)}&title=${enc(`My portfolio got roasted — ${roast.score}/10`)}`,
+    },
+  ];
 
   return (
     <div className="min-h-screen">
@@ -806,26 +930,20 @@ const RoastPage = () => {
                 </div>
               </div>
 
-              <div className="mt-10 flex flex-wrap gap-4 items-center justify-between">
-                <div className="text-xs uppercase tracking-widest text-[#a1a1aa]">
+              <div className="mt-10 border-t-2 border-[#3f3f46] pt-8">
+                <div className="text-xs uppercase tracking-widest text-[#a1a1aa] mb-4">
                   Share the damage. Let the internet join in.
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href={tweetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-testid="share-twitter"
-                  >
-                    <BrutalButton variant="solid">
-                      <Share2 size={16} /> SHARE ON X
-                    </BrutalButton>
-                  </a>
+                <ShareGrid shareLinks={shareLinks} shareUrl={shareUrl} shareText={shareText} />
+                <div className="mt-8 flex flex-wrap gap-3 justify-between items-center">
                   <Link to="/#roast" data-testid="roast-again">
                     <BrutalButton variant="primary">
                       <Sparkles size={16} /> ROAST AGAIN (₹29)
                     </BrutalButton>
                   </Link>
+                  <div className="text-xs uppercase tracking-widest text-[#52525b]">
+                    ID {roast.id.slice(0, 8)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -854,6 +972,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/roast/:id" element={<RoastPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/refund" element={<RefundPage />} />
+          <Route path="/contact" element={<ContactPage />} />
         </Routes>
       </BrowserRouter>
     </div>
