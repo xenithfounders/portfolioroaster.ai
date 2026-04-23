@@ -10,28 +10,27 @@ from typing import Optional, List
 from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from supabase import create_client, Client
 from pydantic import BaseModel, Field, EmailStr
 
 import razorpay
 import requests as http_requests
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import openai
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 # ---------- Config ----------
-MONGO_URL = os.environ["MONGO_URL"]
-DB_NAME = os.environ["DB_NAME"]
-EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
-RAZORPAY_KEY_ID = os.environ["RAZORPAY_KEY_ID"]
-RAZORPAY_KEY_SECRET = os.environ["RAZORPAY_KEY_SECRET"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
 ROAST_PRICE_PAISE = 2900  # ₹29
 
 # ---------- Clients ----------
-mongo_client = AsyncIOMotorClient(MONGO_URL)
-db = mongo_client[DB_NAME]
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
@@ -146,14 +145,9 @@ Rules:
 
 
 async def _call_gemini_roast(portfolio_content: str, portfolio_url: Optional[str]) -> dict:
-    session_id = f"roast-{uuid.uuid4()}"
-    chat = (
-        LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=session_id,
-            system_message=ROAST_SYSTEM_PROMPT,
-        )
-        .with_model("gemini", "gemini-2.5-pro")
+    client = openai.OpenAI(
+        api_key=EMERGENT_LLM_KEY,
+        base_url="https://api.preview.emergentagent.com/v1"
     )
 
     user_text = f"""Roast this developer portfolio. Return ONLY the JSON schema I specified.
@@ -163,7 +157,17 @@ PORTFOLIO URL: {portfolio_url or "(no URL provided, only pasted text)"}
 PORTFOLIO CONTENT:
 {portfolio_content}
 """
-    resp = await chat.send_message(UserMessage(text=user_text))
+    
+    response = client.chat.completions.create(
+        model="gemini-2.5-pro",
+        messages=[
+            {"role": "system", "content": ROAST_SYSTEM_PROMPT},
+            {"role": "user", "content": user_text}
+        ],
+        response_format={"type": "json_object"}
+    )
+    
+    resp = response.choices[0].message.content
     # Parse JSON robustly
     raw = resp.strip()
     # strip code fences if model added them
@@ -212,7 +216,9 @@ async def root():
 @api_router.post("/roast/eligibility", response_model=EligibilityResponse)
 async def check_eligibility(payload: EligibilityRequest):
     email = payload.email.lower()
-    record = await db.emails.find_one({"email": email}, {"_id": 0})
+    res = supabase.table("emails").select("*").eq("email", email).execute()
+    record = res.data[0] if res.data else None
+    
     if not record:
         return EligibilityResponse(
             email=email,
@@ -249,7 +255,7 @@ async def create_order(payload: CreateOrderRequest):
         logger.exception("Razorpay order creation failed")
         raise HTTPException(status_code=502, detail=f"Razorpay order creation failed: {e}")
 
-    await db.payments.insert_one(
+    supabase.table("payments").insert(
         {
             "order_id": order["id"],
             "email": email,
@@ -259,7 +265,7 @@ async def create_order(payload: CreateOrderRequest):
             "receipt": receipt,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-    )
+    ).execute()
     return CreateOrderResponse(
         order_id=order["id"],
         amount=ROAST_PRICE_PAISE,
@@ -278,29 +284,24 @@ async def verify_payment(payload: VerifyPaymentRequest):
     try:
         razorpay_client.utility.verify_payment_signature(params_dict)
     except razorpay.errors.SignatureVerificationError:
-        await db.payments.update_one(
-            {"order_id": payload.razorpay_order_id},
-            {"$set": {"status": "signature_failed"}},
-        )
+        supabase.table("payments").update({"status": "signature_failed"}).eq("order_id", payload.razorpay_order_id).execute()
         raise HTTPException(status_code=400, detail="Invalid payment signature.")
     except Exception as e:
         logger.exception("Signature verification failed unexpectedly")
         raise HTTPException(status_code=500, detail=f"Verification error: {e}")
 
-    await db.payments.update_one(
-        {"order_id": payload.razorpay_order_id},
+    # For upsert to work in Supabase, the table must have a unique constraint or primary key on order_id.
+    # Alternatively we can just update since the row was inserted in create_order.
+    supabase.table("payments").update(
         {
-            "$set": {
-                "status": "paid",
-                "payment_id": payload.razorpay_payment_id,
-                "signature": payload.razorpay_signature,
-                "email": payload.email.lower(),
-                "paid_at": datetime.now(timezone.utc).isoformat(),
-                "roast_consumed": False,
-            }
-        },
-        upsert=True,
-    )
+            "status": "paid",
+            "payment_id": payload.razorpay_payment_id,
+            "signature": payload.razorpay_signature,
+            "email": payload.email.lower(),
+            "paid_at": datetime.now(timezone.utc).isoformat(),
+            "roast_consumed": False,
+        }
+    ).eq("order_id", payload.razorpay_order_id).execute()
     return VerifyPaymentResponse(verified=True, payment_id=payload.razorpay_payment_id)
 
 
@@ -311,7 +312,8 @@ async def generate_roast(payload: GenerateRoastRequest):
         raise HTTPException(status_code=400, detail="Provide a portfolio_url or portfolio_text.")
 
     # Check eligibility
-    email_record = await db.emails.find_one({"email": email}, {"_id": 0})
+    res_emails = supabase.table("emails").select("*").eq("email", email).execute()
+    email_record = res_emails.data[0] if res_emails.data else None
     has_used_free = bool(email_record and email_record.get("used_free_roast"))
 
     is_paid = False
@@ -322,10 +324,9 @@ async def generate_roast(payload: GenerateRoastRequest):
                 detail="Free roast already used. Payment required.",
             )
         # Verify the payment exists, is paid, and not yet consumed.
-        pay = await db.payments.find_one(
-            {"payment_id": payload.payment_id, "email": email, "status": "paid"},
-            {"_id": 0},
-        )
+        res_pay = supabase.table("payments").select("*").eq("payment_id", payload.payment_id).eq("email", email).eq("status", "paid").execute()
+        pay = res_pay.data[0] if res_pay.data else None
+        
         if not pay:
             raise HTTPException(status_code=402, detail="Payment not found or not verified.")
         if pay.get("roast_consumed"):
@@ -363,34 +364,35 @@ async def generate_roast(payload: GenerateRoastRequest):
         "is_paid": is_paid,
         "created_at": now_iso,
     }
-    await db.roasts.insert_one(doc)
+    supabase.table("roasts").insert(doc).execute()
 
     # Update email usage
     if not has_used_free:
-        await db.emails.update_one(
-            {"email": email},
-            {
-                "$set": {
-                    "email": email,
-                    "used_free_roast": True,
-                    "first_roast_at": now_iso,
-                }
-            },
-            upsert=True,
-        )
+        # Check if email exists to update or insert
+        if email_record:
+            supabase.table("emails").update({
+                "used_free_roast": True,
+                "first_roast_at": now_iso,
+            }).eq("email", email).execute()
+        else:
+            supabase.table("emails").insert({
+                "email": email,
+                "used_free_roast": True,
+                "first_roast_at": now_iso,
+            }).execute()
     else:
         # consume payment
-        await db.payments.update_one(
-            {"payment_id": payload.payment_id},
-            {"$set": {"roast_consumed": True, "consumed_at": now_iso, "roast_id": roast_id}},
-        )
+        supabase.table("payments").update(
+            {"roast_consumed": True, "consumed_at": now_iso, "roast_id": roast_id}
+        ).eq("payment_id", payload.payment_id).execute()
 
     return RoastResult(**doc)
 
 
 @api_router.get("/roast/{roast_id}", response_model=RoastResult)
 async def get_roast(roast_id: str):
-    doc = await db.roasts.find_one({"id": roast_id}, {"_id": 0})
+    res = supabase.table("roasts").select("*").eq("id", roast_id).execute()
+    doc = res.data[0] if res.data else None
     if not doc:
         raise HTTPException(status_code=404, detail="Roast not found.")
     return RoastResult(**doc)
@@ -409,4 +411,9 @@ app.add_middleware(
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    mongo_client.close()
+    pass
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
